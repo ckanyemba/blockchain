@@ -1,64 +1,57 @@
-const ChainUtil = require("../chain-util");
-const { DIFFICULTY, MINE_RATE } = require("../config");
+const { GENESIS_DATA , MINE_RATE} = require('../config');
+const cryptoHash = require('../util/crypto-hash');
+const hexToBinary = require('hex-to-binary');
 
-class Block {
-  constructor(timestamp, lastHash, hash, data, nonce, difficulty) {
-    this.timestamp = timestamp;
-    this.lastHash = lastHash;
-    this.hash = hash;
-    this.nonce = nonce;
-    this.data = data;
-    this.difficulty = difficulty || DIFFICULTY;
-  }
+class Block
+{
+    constructor({timestamp,nonce,difficulty,lastHash,hash,data})
+    {
+        this.timestamp = timestamp;
+        this.nonce = nonce;
+        this.difficulty = difficulty;
+        this.lastHash = lastHash;
+        this.hash = hash
+        this.data =  data;
+    }
 
-  toString() {
-    return `Block -
-            Timestamp : ${this.timestamp}
-            Last Hash : ${this.lastHash.substring(0, 10)}
-            Hash      : ${this.hash.substring(0, 10)}
-            Nonce     : ${this.nonce}
-            Difficulty: ${this.difficulty}
-            Data      : ${this.data}`;
-  }
+    static genesis()
+    {
+        return new Block(GENESIS_DATA);
+    }
 
-  static genesis() {
-    return new this("Genesis time", "=======", "f1r57-h45h", [], 0, DIFFICULTY);
-  }
+    static mineBlock({lastBlock,data})
+    {
+        const lastHash = lastBlock.hash;
+        let hash, timestamp;
+        let { difficulty } = lastBlock;
+        let nonce = 0;
+        do{
+            nonce++;
+            timestamp = Date.now();
+            difficulty = Block.adjustDifficulty({originalBlock: lastBlock,timestamp});
+            hash = cryptoHash(timestamp,nonce,difficulty,lastHash,data)
+        }while(hexToBinary(hash).substring(0,difficulty) !== '0'.repeat(difficulty));
 
-  static mineBlock(lastBlock, data) {
-    let hash, timestamp;
-    const lastHash = lastBlock.hash;
-    let { difficulty } = lastBlock;
-    let nonce = 0;
+        return new this({
+            timestamp,
+            nonce,
+            difficulty ,
+            lastHash,
+            data,
+            hash,
+        });
+    }
 
-    do {
-      nonce++;
-      timestamp = Date.now();
-      difficulty = Block.adjustDifficulty(lastBlock, timestamp);
-      hash = Block.hash(timestamp, lastHash, data, nonce, difficulty);
-    } while (hash.substring(0, difficulty) !== "0".repeat(difficulty));
-    return new this(timestamp, lastHash, hash, data, nonce, difficulty);
-  }
+    static adjustDifficulty({originalBlock,timestamp})
+    {
+        const { difficulty } = originalBlock;
 
-  static hash(timestamp, lastHash, data, nonce, difficulty) {
-    return ChainUtil.hash(
-      `${timestamp}${lastHash}${data}${nonce}{difficulty}`
-    ).toString();
-  }
+        if (difficulty < 1) return 1;
+        
+        if((timestamp - originalBlock.timestamp) > MINE_RATE) return difficulty - 1;
 
-  static blockHash(block) {
-    const { timestamp, lastHash, data, nonce, difficulty } = block;
-    return Block.hash(timestamp, lastHash, data, nonce, difficulty);
-  }
-
-  static adjustDifficulty(lastBlock, currentTime) {
-    let { difficulty } = lastBlock;
-    difficulty =
-      lastBlock.timestamp + MINE_RATE > currentTime
-        ? difficulty + 1
-        : difficulty - 1;
-    return difficulty;
-  }
+        return difficulty + 1;
+    }
 }
 
-module.exports = Block;
+module.exports = Block

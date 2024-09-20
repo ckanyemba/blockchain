@@ -1,92 +1,56 @@
-const ChainUtil = require("../chain-util");
-const Transaction = require('./transaction');
-const { INITIAL_BALANCE } = require("../config");
+const { STARTING_BALANCE } = require('../config');
+const cryptoHash = require('../util/crypto-hash');
+const { ec } = require('../util/index');
+const Transaction  = require('../wallet/transaction')
 
-class Wallet {
-  constructor() {
-    this.balance = INITIAL_BALANCE;
-    this.keyPair = ChainUtil.genKeyPair();
-    this.publicKey = this.keyPair.getPublic().encode("hex");
-  }
 
-  toString() {
-    return `Wallet - 
-            publicKey: ${this.publicKey.toString()}
-            balance  : ${this.balance}`;
-  }
+class Wallet{
+    constructor()
+    {
+        this.balance = STARTING_BALANCE;
+        this.keyPair = ec.genKeyPair();
 
-  sign(dataHash) {
-    return this.keyPair.sign(dataHash);
-  }
-
-  createTransaction(recipient, amount, blockchain, transactionPool) {
-    this.balance = this.calculateBalance(blockchain);
-    
-    if (amount > this.balance) {
-      console.log(`Amount: ${amount} exceeds current balance: ${this.balance}`);
-      return;
+        this.publicKey = this.keyPair.getPublic().encode('hex');
     }
-  
-    let transaction = transactionPool.existingTransaction(this.publicKey);
-  
-    if (transaction) {
-      transaction.update(this, recipient, amount);
-    } else {
-      transaction = Transaction.newTransaction(this, recipient, amount);
-      transactionPool.updateOrAddTransaction(transaction);
-    }
-  
-    // Return the transaction so it can be used in the tests
-    return transaction;
-  }
 
-  calculateBalance(blockchain) {
-    let balance = this.balance;
-    let transactions = [];
-  
-    // Ensure blockchain.chain is defined and is an array
-    if (blockchain.chain && Array.isArray(blockchain.chain)) {
-      blockchain.chain.forEach(block => {
-        if (block.data && Array.isArray(block.data)) { // Check if block.data is defined and is an array
-          block.data.forEach(transaction => transactions.push(transaction));
+    sign(data)
+    {
+       return this.keyPair.sign(cryptoHash(data));
+    }
+
+    createTransaction({amount,recipient}){
+        if(amount>this.balance)
+        {
+            throw new Error('Amount exceeds balance')
         }
-      });
-    } else {
-      console.log('blockchain.chain is undefined or not an array');
-    }
-  
-    const walletInputTs = transactions.filter(transaction => transaction.input.address === this.publicKey);
-    let startTime = 0;
-  
-    if (walletInputTs.length > 0) {
-      const recentInputT = walletInputTs.reduce(
-        (prev, current) => prev.input.timestamp > current.input.timestamp ? prev : current
-      );
-  
-      balance = recentInputT.outputs.find(output => output.address === this.publicKey).amount;
-      startTime = recentInputT.input.timestamp;
-    }
-  
-    transactions.forEach(transaction => {
-      if (transaction.input && transaction.input.timestamp > startTime) {
-        transaction.outputs.find(output => {
-          if (output.address === this.publicKey) {
-            balance += output.amount;
-          }
-        });
-      }
-    });
-  
-    return balance;
-  }
-  
-  
 
-  static blockchainWallet() {
-    const blockchainWallet = new this();
-    blockchainWallet.address = 'blockchain-wallet';
-    return blockchainWallet;
-  }
+        return new Transaction({senderWallet: this,recipient,amount})
+    }
+
+    static calculateBalance({ chain, address }) {
+        let hasConductedTransaction = false;
+        let outputsTotal = 0;
+
+        for (let i=chain.length-1; i>0; i--) {
+            const block = chain[i];
+
+            for (let transaction of block.data) {
+                if (transaction.input.address === address) {
+                    hasConductedTransaction = true;
+                }
+
+                const addressOutput = transaction.outputMap[address];
+
+                if (addressOutput) {
+                    outputsTotal = outputsTotal + addressOutput;
+                }
+            }
+        }
+
+        return STARTING_BALANCE + outputsTotal;
+    }
 }
+
+new Wallet().sign("foo");
 
 module.exports = Wallet;

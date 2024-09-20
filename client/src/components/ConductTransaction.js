@@ -13,7 +13,7 @@ class ConductTransaction extends Component {
     this.setState({ amount: Number(event.target.value) });
   }
 
-  ConductTransaction = () => {
+  conductTransaction = () => {
     const { recipient, amount } = this.state;
 
     fetch('http://localhost:3000/api/transact', {
@@ -28,7 +28,6 @@ class ConductTransaction extends Component {
 
   render() {
     console.log('this.state', this.state);
-
 
     return (
       <div className="ConductTransaction">

@@ -1,27 +1,32 @@
 import React, { Component } from 'react';
+import Blocks from './Blocks';
+import logo from '../assets/logo.jpg';
 
 class App extends Component {
-    state: { walletInfo: {}};
+    state = { walletInfo: { address: 'fooxv6', balance: 9999 } };
 
     componentDidMount() {
         fetch('http://localhost:3000/api/wallet-info')
-        .then(response => response.json())
-        .then(json => this.setState({ walletInfo: json }));
+            .then(response => response.json())
+            .then(json => this.setState({ walletInfo: json }));
     }
 
-    
     render() {
-        const { address, balance } = this.state.walletInfo;
-     
+       const { address, balance } = this.state.walletInfo;
+
         return (
-            <>
             <div>
-                Welcome to the blockchain...
+                <img className='logo' src={logo} alt="Logo" />
+                <br />
+                <div>
+                    Welcome to the blockchain...
+                </div>
+                <div>Address: {address}</div>
+                <div>Balance: {balance}</div>
+                <br />
+                <Blocks />
             </div>
-            <div>Address: {address} </div>
-            <div>Balance: {balance} </div>
-        )
-        </>
+        );
     }
 }
 

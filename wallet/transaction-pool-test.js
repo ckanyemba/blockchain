@@ -1,85 +1,50 @@
-const TransactionPool = require("./transaction-pool");
-const Transaction = require("./transaction");
-const Wallet = require("./index");
-const Blockchain = require('../blockchain');
+const TransactionPool = require('./transaction-pool');
+const Wallet = require('./index');
+const Transaction = require('./transaction');
 
-describe ('TransactionPool', () => {
-  let, tp, wallet, transaction, bc;
-
-  beforeEach(() => {
-    tp = new TransactionPool();
-    wallet = new Wallet;
-    bc = new Blockchain();
-    transaction = transaction.newTransaction(wallet, 'r4nd-4dr355', 30);
-    tp.updateOrAddTransaction(transaction);
-  });
-
-  it ("adds a transaction to the pool", () => {
-    expect(tp.transactions.find(t => t.id === transaction.id)).toEqual(transaction);
-  });
-
-
-  it('updates a transaction in the pool', () => {
-    const oldTransaction = JSON.stringify(transaction);
-    const newTransaction = transaction.update(wallet, "foo-4ddr355", 40);
-    tp.updateOrAddTransaction(newTransaction);
-
-    expect(JSON.stringify(tp.transactions.find(t => t.id === new Transaction.id)))
-    .not.toEqual(oldTransaction);
-  });
-});  
-
-describe("TransactionPool", () => {
-  let tp, wallet, transaction;
-
-  beforeEach(() => {
-    tp = new TransactionPool();
-    wallet = new Wallet();
-    transaction = Transaction.newTransaction(wallet, "r4nd-4dr355", 30);
-    tp.update0rAddTransaction(transaction);
-  });
-
-  it("adds a transaction to the pool", () => {
-    expect(tp.transactions.find((t) => t.id === transaction.id)).toEqual(
-      transaction
-    );
-  });
-  it("updates a transaction in the pool", () => {
-    const oldTransaction = JSON.stringify(transaction);
-    const newTransaction = transaction.update(wallet, "foo-4ddr355", 40);
-    tp.update0rAddTransaction(newTransaction);
-    expect(
-      JSON.stringify(tp.transactions.find((t) => t.id === new Transaction.id()))
-    ).not.toEqual(oldTransaction);
-  });
-
-  it('clears transactions', () => {
-    tp.clear();
-    expect(tp.transactions).toEqual([])
-  });
-
-  describe('mixing valid and corrupt transactions', () => {
-    let validTransactions;
-
-    beforeEach(() => {
-      validTransactions = [...tp.transactions];
-      for (let i=0; i<6; i++) {
-        wallet = new Wallet();
-        transaction = wallet.createTransaction("r4nd-4dr355", 30, bc, tp);
-        if(i%2==0) {
-          transaction.input.amount = 99999;
-        } else {
-          validTransactions.push(transaction);
-        }
-      }
+describe('TransactionPool()',()=>{
+    let senderWallet;
+    beforeEach(()=>{
+        transactionPool = new TransactionPool()
+        transaction = new Transaction({
+            senderWallet: new Wallet(),
+            recipient: 'fake-recepient',
+            amount: 50
+        });
     });
 
-    it('shows a difference between valid and corrupt transactions', () => {
-      expect(JSON.stringify(tp.transactions)).not.toEqual(JSON.stringify(validTransactions));
-    });
+    describe('setTransaction()',()=>{
+        it('adds a transaction',()=>{
+            transactionPool.setTransaction(transaction);
 
-    it('grabs valid transactions', () => {
-      expect(tp.validTransactions()).toEqual(validTransactions);
+            expect(transactionPool.transactionMap[transaction.id]).toBe(transaction)
+        })
     })
-  })
-});
+
+    describe('validTransaction()',()=>{
+        let validTransactions;
+        beforeEach(()=>{
+            validTransactions = []
+
+            for(let i=0;i<10;i++)
+            {
+                transaction = new Transaction({
+                    senderWallet,
+                    recipient: 'any-recepient',
+                    amount: 50
+                })
+
+                if(i%3==0)
+                {transaction.input.amount = 999999}
+                else if(i%3==1)
+                {transaction.input.signature = new Wallet().sign('foo')}
+                else{validTransactions.push(transaction)}
+            }
+
+            transactionPool.setTransaction(transaction)
+        })
+        it('return valid transaction',()=>{
+            expect(transactionPool.validTransactions()).toEqual(validTransactions)
+        })
+    })
+})
