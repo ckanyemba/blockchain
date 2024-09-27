@@ -1,12 +1,19 @@
-const crypto = require('crypto');
+const crypto = require("crypto");
 
 const cryptoHash = (...inputs) => {
-  const hash = crypto.createHash('sha256');
+  const hash = crypto.createHash("sha256");
 
-  // Map through inputs, stringify only if not already a string
-  hash.update(inputs.map(input => typeof input === 'string' ? input : JSON.stringify(input)).join(' '));
+  // update() will create a hash value within obj itself, which we can acces later
+  hash.update(
+    inputs
+      .map(input => {
+        return JSON.stringify(input);
+      })
+      .sort()
+      .join(" ")
+  );
 
-  return hash.digest('hex');
+  return hash.digest("hex");
 };
 
 module.exports = cryptoHash;
