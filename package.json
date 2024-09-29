@@ -2,15 +2,15 @@
   "name": "blockbureau",
   "version": "1.0.0",
   "scripts": {
+    "build": "npm run build-client",
     "test": "jest --watchAll",
     "start": "npm run dev-client & node index.js",
     "dev": "npm run dev-client & npm run start-redis && cross-env ENV='development' nodemon index.js",
     "dev-peer": "cross-env GENERATE_PEER_PORT='true' ENV='development' nodemon index.js",
     "start-redis": "redis-server --daemonize yes",
-   "build-client": "npm run clean && parcel build client/src/index.html --dist-dir client/dist",
-   "dev-client": "npm run clean && parcel client/src/index.html --dist-dir client/dist", 
-   "clean": "rm -rf .cache client/dist"
-
+    "build-client": "npm run clean && parcel build client/src/index.html --dist-dir client/dist",
+    "dev-client": "npm run clean && parcel client/src/index.html --dist-dir client/dist",
+    "clean": "rm -rf .cache client/dist"
   },
   "jest": {
     "testEnvironment": "node"
@@ -32,7 +32,8 @@
     "cross-env": "^7.0.3",
     "jest": "^29.7.0",
     "nodemon": "^3.1.4",
-    "parcel": "^2.12.0"
+    "parcel": "^2.12.0",
+    "process": "^0.11.10"
   },
   "dependencies": {
     "@types/react": "^18.3.8",
@@ -44,8 +45,10 @@
     "babel-preset-env": "^1.7.0",
     "body-parser": "^1.20.2",
     "bootstrap": "^5.3.3",
+    "cors": "^2.8.5",
     "crypto": "^1.0.1",
     "crypto-js": "^4.2.0",
+    "dotenv": "^16.4.5",
     "elliptic": "^6.5.7",
     "express": "^4.21.0",
     "hex-to-binary": "^1.0.1",

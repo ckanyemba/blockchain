@@ -1,4 +1,4 @@
-const redis = require('redis');
+const { kv } = require('@vercel/kv');
 
 const CHANNELS = {
   TEST: 'TEST',
@@ -7,60 +7,65 @@ const CHANNELS = {
 };
 
 class PubSub {
-  constructor({ blockchain, transactionPool, redisUrl }) {
-    this.transactionPool = transactionPool;
+  constructor({ blockchain, transactionPool }) {
     this.blockchain = blockchain;
+    this.transactionPool = transactionPool;
+    this.lastProcessedTimestamp = Date.now();
+  }
 
-    this.publisher = redis.createClient(redisUrl);
-    this.subscriber = redis.createClient(redisUrl);
+  async publish({ channel, message }) {
+    const timestamp = Date.now();
+    await kv.set(`${channel}:${timestamp}`, JSON.stringify(message));
+    await kv.expire(`${channel}:${timestamp}`, 3600); // Expire after 1 hour
+  }
 
-    // Connect Redis clients
-    this.publisher.connect().then(() => console.log('Publisher connected to Redis'));
-    this.subscriber.connect().then(() => {
-      console.log('Subscriber connected to Redis');
-      this.subscribeToChannels();
-      this.subscriber.on('message', (channel, message) => this.handleMessage(channel, message));
+  async broadcastChain() {
+    await this.publish({
+      channel: CHANNELS.BLOCKCHAIN,
+      message: this.blockchain.chain
     });
   }
 
-  handleMessage(channel, message) {
-    console.log(`Message received. Channel: ${channel}, Message: ${message}`);
+  async broadcastTransaction(transaction) {
+    await this.publish({
+      channel: CHANNELS.TRANSACTION,
+      message: transaction
+    });
+  }
 
-    const parsedMessage = JSON.parse(message);
+  async handleMessage(channel, message) {
+    console.log(`Message received. Channel: ${channel}, Message:`, message);
+
     if (channel === CHANNELS.BLOCKCHAIN) {
-      this.blockchain.replaceChain(parsedMessage);
+      this.blockchain.replaceChain(message);
     } else if (channel === CHANNELS.TRANSACTION) {
-      this.transactionPool.setTransaction(parsedMessage);
+      this.transactionPool.setTransaction(message);
     }
   }
 
-  subscribeToChannels() {
-    Object.values(CHANNELS).forEach(channel => {
-      this.subscriber.subscribe(channel);
-    });
+  async subscribeToChannels() {
+    for (const channel of Object.values(CHANNELS)) {
+      const messages = await kv.keys(`${channel}:*`);
+      for (const key of messages) {
+        const [, timestamp] = key.split(':');
+        if (parseInt(timestamp) > this.lastProcessedTimestamp) {
+          const message = await kv.get(key);
+          try {
+            const parsedMessage = typeof message === 'string' ? JSON.parse(message) : message;
+            await this.handleMessage(channel, parsedMessage);
+          } catch (error) {
+            console.error(`Error parsing message for key ${key}:`, error);
+            console.log('Problematic message:', message);
+          }
+        }
+      }
+    }
+    this.lastProcessedTimestamp = Date.now();
   }
 
-  publish({ channel, message }) {
-    // First unsubscribe, publish, and then subscribe again
-    this.subscriber.unsubscribe(channel, () => {
-      this.publisher.publish(channel, message, () => {
-        this.subscriber.subscribe(channel);
-      });
-    });
-  }
-
-  broadcastChain() {
-    this.publish({
-      channel: CHANNELS.BLOCKCHAIN,
-      message: JSON.stringify(this.blockchain.chain)
-    });
-  }
-
-  broadcastTransaction(transaction) {
-    this.publish({
-      channel: CHANNELS.TRANSACTION,
-      message: JSON.stringify(transaction)
-    });
+  // This method should be called periodically to check for new messages
+  async checkForUpdates() {
+    await this.subscribeToChannels();
   }
 }
 

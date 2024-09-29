@@ -6,17 +6,29 @@ class Blocks extends Component {
   state = { blocks: [], paginatedId: 1, blocksLength: 0 };
 
   componentDidMount() {
-    fetch(`${document.location.origin}/api/blocks/length`)
-      .then(response => response.json())
-      .then(json => this.setState({ blocksLength: json }));
-
+    fetch(`/api/blocks/length`)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+  })
+      .then(json => this.setState({ blocksLength: json }))
+      .catch(err => console.error('Fetch error:', err));
     this.fetchPaginatedBlocks(this.state.paginatedId)();
   }
 
   fetchPaginatedBlocks = paginatedId => () => {
-    fetch(`${document.location.origin}/api/blocks/${paginatedId}`)
-      .then(response => response.json())
-      .then(json => this.setState({ blocks: json }));
+    fetch(`/api/blocks/${paginatedId}`)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      })
+      .then(json => this.setState({ blocks: json }))
+      .catch(err => console.error('Fetch error:', err));
+
   };
 
   render() {

@@ -5,9 +5,15 @@ class Home extends Component {
   state = { walletInfo: {} };
 
   componentDidMount() {
-    fetch(`${document.location.origin}/api/wallet-info`)
-      .then(response => response.json())
-      .then(json => this.setState({ walletInfo: json }));
+    fetch(`/api/wallet-info`) // This should work if the backend is on the same domain
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      })
+      .then(json => this.setState({ walletInfo: json }))
+      .catch(err => console.error('Fetch error:', err));
   }
 
   render() {
