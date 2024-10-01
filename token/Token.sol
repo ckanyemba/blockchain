@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.7.4;
+pragma solidity ^0.7.0;
 
-contract Token {
-    string public name = "UBUNTU";
+contract MyToken {
+    string public name = "Ubuntu";
     string public symbol = "NTU";
     uint8 public decimals = 18;
     uint256 public totalSupply;
+
     mapping(address => uint256) public balanceOf;
     mapping(address => mapping(address => uint256)) public allowance;
 
@@ -13,12 +14,11 @@ contract Token {
     event Approval(address indexed owner, address indexed spender, uint256 value);
 
     constructor(uint256 _initialSupply) {
-        totalSupply = _initialSupply * 10 ** uint256(decimals);
+        totalSupply = _initialSupply * (10 ** uint256(decimals));
         balanceOf[msg.sender] = totalSupply;
     }
 
     function transfer(address _to, uint256 _value) public returns (bool success) {
-        require(_to != address(0), "Invalid address");
         require(balanceOf[msg.sender] >= _value, "Insufficient balance");
         balanceOf[msg.sender] -= _value;
         balanceOf[_to] += _value;
@@ -33,9 +33,9 @@ contract Token {
     }
 
     function transferFrom(address _from, address _to, uint256 _value) public returns (bool success) {
-        require(_from != address(0), "Invalid address");
-        require(balanceOf[_from] >= _value, "Insufficient balance");
-        require(allowance[_from][msg.sender] >= _value, "Allowance exceeded");
+        require(_value <= balanceOf[_from], "Insufficient balance");
+        require(_value <= allowance[_from][msg.sender], "Allowance exceeded");
+
         balanceOf[_from] -= _value;
         balanceOf[_to] += _value;
         allowance[_from][msg.sender] -= _value;
